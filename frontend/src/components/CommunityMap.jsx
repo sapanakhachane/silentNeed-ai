@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap } from 're
 import L from 'leaflet';
 import { 
   Activity, Droplets, Zap, ShieldAlert, ChevronRight, Layers, 
-  HeartPulse, Building, MapPin, Eye, Compass
+  HeartPulse, Building, MapPin, Eye, Compass, Globe, Map as MapIcon
 } from 'lucide-react';
 import { fetchCommunityOSM } from '../services/api';
 
@@ -41,13 +41,13 @@ function createCustomPin(tier, silentNeedIndex, isAnomaly) {
     html: `
       <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
         <div style="position: absolute; width: 38px; height: 38px; border-radius: 50%; background: ${bgRgba};" class="${pulseClass}"></div>
-        <div style="position: absolute; width: 28px; height: 28px; border-radius: 50%; background: #0f172a; border: 2.5px solid ${color}; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.6);">
-          <span style="font-weight: 800; font-size: 11px; color: ${color}; font-family: monospace;">
+        <div style="position: absolute; width: 28px; height: 28px; border-radius: 50%; background: #ffffff; border: 3px solid ${color}; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,0.35);">
+          <span style="font-weight: 800; font-size: 11px; color: ${color}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
             ${Math.round(silentNeedIndex)}
           </span>
         </div>
         ${isAnomaly ? `
-          <div style="position: absolute; top: 0px; right: 0px; width: 14px; height: 14px; border-radius: 50%; background: #e11d48; border: 2px solid #0f172a; display: flex; align-items: center; justify-content: center;">
+          <div style="position: absolute; top: 0px; right: 0px; width: 14px; height: 14px; border-radius: 50%; background: #ea4335; border: 2px solid #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
             <span style="font-size: 8px; color: #fff; font-weight: bold;">!</span>
           </div>
         ` : ''}
@@ -59,32 +59,32 @@ function createCustomPin(tier, silentNeedIndex, isAnomaly) {
   });
 }
 
-// Generate OpenStreetMap Amenity POI Icons (Water Tap, Clinic, Public Building)
+// Generate POI Icons
 function createOsmPoiIcon(type) {
   let symbol = '💧';
-  let borderColor = '#0284c7';
+  let borderColor = '#1a73e8';
 
   if (type === 'clinic' || type === 'hospital') {
     symbol = '🏥';
-    borderColor = '#10b981';
+    borderColor = '#34a853';
   } else if (type === 'public_building' || type === 'townhall') {
     symbol = '🏛️';
-    borderColor = '#f59e0b';
+    borderColor = '#fbbc04';
   } else if (type === 'waste_disposal' || type === 'waste_basket') {
     symbol = '🗑️';
-    borderColor = '#8b5cf6';
+    borderColor = '#ea4335';
   }
 
   return L.divIcon({
     className: 'osm-poi-marker',
     html: `
-      <div style="width: 24px; height: 24px; border-radius: 50%; background: #0f172a; border: 2px solid ${borderColor}; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.5); font-size: 11px;">
+      <div style="width: 26px; height: 26px; border-radius: 50%; background: #ffffff; border: 2px solid ${borderColor}; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.25); font-size: 12px;">
         ${symbol}
       </div>
     `,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -12]
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+    popupAnchor: [0, -13]
   });
 }
 
@@ -102,12 +102,12 @@ export default function CommunityMap({
     return defaultCenter;
   }, [selectedCommunity]);
 
-  // OpenStreetMap Tile Layer Options
-  const [osmLayer, setOsmLayer] = useState('osm-standard'); // 'osm-standard', 'osm-hot', 'osm-voyager'
-  const [showOsmPois, setShowOsmPois] = useState(true);
+  // Google Maps Style Mode: 'google-roadmap', 'google-satellite', 'google-hybrid', 'google-terrain'
+  const [mapMode, setMapMode] = useState('google-roadmap');
+  const [showPois, setShowPois] = useState(true);
   const [osmPois, setOsmPois] = useState([]);
 
-  // Fetch live OpenStreetMap POIs when selected community changes
+  // Fetch live infrastructure POIs when selected community changes
   useEffect(() => {
     if (selectedCommunity?.id) {
       fetchCommunityOSM(selectedCommunity.id)
@@ -116,7 +116,7 @@ export default function CommunityMap({
             setOsmPois(data.osm_infrastructure_audit.mapped_pois);
           }
         })
-        .catch(err => console.error("Error loading OSM POIs:", err));
+        .catch(err => console.error("Error loading POIs:", err));
     }
   }, [selectedCommunity?.id]);
 
@@ -134,97 +134,130 @@ export default function CommunityMap({
     return communities;
   }, [communities, activeFilter]);
 
-  // OSM Tile URL Selector
+  // Google Maps Tile Configuration (lyrs: m=roadmap, s=satellite, y=hybrid, p=terrain)
   const currentTileConfig = useMemo(() => {
-    switch (osmLayer) {
-      case 'osm-hot':
+    switch (mapMode) {
+      case 'google-satellite':
         return {
-          url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/">Humanitarian OpenStreetMap Team</a>'
+          url: 'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+          attribution: '&copy; Google Maps'
         };
-      case 'osm-standard':
+      case 'google-hybrid':
+        return {
+          url: 'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+          attribution: '&copy; Google Maps'
+        };
+      case 'google-terrain':
+        return {
+          url: 'https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+          attribution: '&copy; Google Maps'
+        };
+      case 'google-roadmap':
       default:
         return {
-          url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url: 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+          attribution: '&copy; Google Maps'
         };
     }
-  }, [osmLayer]);
+  }, [mapMode]);
 
   return (
-    <div className="relative w-full h-[520px] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-900/80">
+    <div className="relative w-full h-[540px] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl bg-white google-map-wrapper">
       
-      {/* Top Floating Bar: OpenStreetMap Layer & POI Controls */}
-      <div className="absolute top-4 left-4 z-[400] flex flex-wrap items-center gap-2 bg-slate-900/95 backdrop-blur-md px-3.5 py-2 rounded-xl border border-slate-700/80 shadow-xl text-xs">
-        <span className="flex items-center gap-1.5 font-bold text-white">
-          <Compass className="w-3.5 h-3.5 text-cyan-400" />
-          OpenStreetMap (OSM)
-        </span>
-        <span className="text-slate-600">|</span>
+      {/* Google Maps Style Layer Switcher (Top-Left) */}
+      <div className="absolute top-3 left-3 z-[400] flex items-center bg-white rounded-md shadow-md border border-gray-300 text-xs overflow-hidden font-sans font-medium">
+        <button
+          type="button"
+          onClick={() => setMapMode('google-roadmap')}
+          className={`px-3 py-1.5 transition cursor-pointer flex items-center gap-1.5 ${
+            mapMode === 'google-roadmap' 
+              ? 'bg-blue-600 text-white font-semibold' 
+              : 'text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          <MapIcon className="w-3.5 h-3.5" />
+          Map
+        </button>
+        <button
+          type="button"
+          onClick={() => setMapMode('google-hybrid')}
+          className={`px-3 py-1.5 transition cursor-pointer flex items-center gap-1.5 border-l border-gray-200 ${
+            mapMode === 'google-hybrid' || mapMode === 'google-satellite'
+              ? 'bg-blue-600 text-white font-semibold' 
+              : 'text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          <Globe className="w-3.5 h-3.5" />
+          Satellite
+        </button>
+        <button
+          type="button"
+          onClick={() => setMapMode('google-terrain')}
+          className={`px-3 py-1.5 transition cursor-pointer flex items-center gap-1.5 border-l border-gray-200 ${
+            mapMode === 'google-terrain' 
+              ? 'bg-blue-600 text-white font-semibold' 
+              : 'text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          Terrain
+        </button>
+      </div>
 
-        {/* OSM Layer Switcher */}
-        <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
-          <button
-            onClick={() => setOsmLayer('osm-standard')}
-            className={`px-2 py-1 rounded text-[11px] font-semibold transition cursor-pointer ${
-              osmLayer === 'osm-standard' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            OSM Standard
-          </button>
-          <button
-            onClick={() => setOsmLayer('osm-hot')}
-            className={`px-2 py-1 rounded text-[11px] font-semibold transition cursor-pointer ${
-              osmLayer === 'osm-hot' ? 'bg-rose-500 text-white' : 'text-slate-400 hover:text-white'
-            }`}
-            title="Humanitarian OpenStreetMap Team (Disaster & Informal Settlements)"
-          >
-            OSM Humanitarian (HOT)
-          </button>
-        </div>
-
-        <span className="text-slate-600">|</span>
-
-        {/* Toggle OSM Amenity POIs */}
-        <label className="flex items-center gap-1.5 text-[11px] text-slate-300 cursor-pointer">
+      {/* Public Amenities Overlay Toggle (Top-Left secondary) */}
+      <div className="absolute top-3 left-64 z-[400] hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-md shadow-md border border-gray-300 text-xs text-gray-700">
+        <label className="flex items-center gap-1.5 cursor-pointer font-medium">
           <input
             type="checkbox"
-            checked={showOsmPois}
-            onChange={(e) => setShowOsmPois(e.target.checked)}
-            className="rounded accent-cyan-500 cursor-pointer"
+            checked={showPois}
+            onChange={(e) => setShowPois(e.target.checked)}
+            className="rounded text-blue-600 focus:ring-blue-500 accent-blue-600 cursor-pointer"
           />
-          <span>Show OSM Public Amenities</span>
+          <span>Show Infrastructure POIs</span>
         </label>
       </div>
 
-      {/* Map Legend Overlay */}
-      <div className="absolute bottom-4 right-4 z-[400] bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-slate-800 shadow-xl text-xs space-y-1.5 pointer-events-auto">
-        <div className="font-semibold text-slate-300 text-[11px] uppercase tracking-wider mb-1 flex items-center justify-between">
-          <span>OpenStreetMap Radar</span>
-          <span className="text-[9px] text-cyan-400 font-mono">Live</span>
+      {/* Google Watermark (Bottom-Left) */}
+      <div className="absolute bottom-2 left-2 z-[400] pointer-events-none select-none flex items-center gap-1 bg-white/80 backdrop-blur-xs px-2 py-0.5 rounded shadow-sm text-[12px] font-sans font-bold text-gray-700">
+        <span style={{ color: '#4285F4' }}>G</span>
+        <span style={{ color: '#EA4335' }}>o</span>
+        <span style={{ color: '#FBBC05' }}>o</span>
+        <span style={{ color: '#4285F4' }}>g</span>
+        <span style={{ color: '#34A853' }}>l</span>
+        <span style={{ color: '#EA4335' }}>e</span>
+      </div>
+
+      {/* Map Legend Overlay (Bottom-Right) */}
+      <div className="absolute bottom-3 right-3 z-[400] bg-white/95 backdrop-blur-md px-3.5 py-2.5 rounded-lg border border-gray-300 shadow-lg text-xs space-y-1.5 pointer-events-auto font-sans text-gray-800">
+        <div className="font-bold text-gray-900 text-[11px] uppercase tracking-wider mb-1 flex items-center justify-between">
+          <span>SilentNeed Radar</span>
+          <span className="text-[10px] text-blue-600 font-semibold">Google Map View</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-red-500 ring-2 ring-red-500/30"></span>
-          <span className="text-slate-300 text-[11px]">Critical Invisible Need (70 - 100)</span>
+          <span className="w-3 h-3 rounded-full bg-red-500 ring-2 ring-red-400/40"></span>
+          <span className="text-gray-700 text-[11px] font-medium">Critical Invisible Need (70 - 100)</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-orange-500"></span>
-          <span className="text-slate-300 text-[11px]">High Disparity Zone (50 - 69)</span>
+          <span className="text-gray-700 text-[11px] font-medium">High Disparity Zone (50 - 69)</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-yellow-400"></span>
-          <span className="text-slate-300 text-[11px]">Moderate Gap (30 - 49)</span>
+          <span className="text-gray-700 text-[11px] font-medium">Moderate Gap (30 - 49)</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-          <span className="text-slate-300 text-[11px]">Equitable / Low Distress (&lt; 30)</span>
+          <span className="text-gray-700 text-[11px] font-medium">Equitable / Low Distress (&lt; 30)</span>
         </div>
 
         {/* POI Key */}
-        <div className="pt-1.5 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
-          <span>💧 OSM Water</span>
-          <span>🏥 OSM Clinic</span>
-          <span>🏛️ OSM Civic</span>
+        <div className="pt-1.5 border-t border-gray-200 flex items-center justify-between text-[10px] text-gray-600">
+          <span>💧 Water Tap</span>
+          <span>🏥 Health Clinic</span>
+          <span>🏛️ Civic Office</span>
         </div>
       </div>
 
@@ -236,12 +269,13 @@ export default function CommunityMap({
       >
         <MapViewUpdater center={mapCenter} zoom={selectedCommunity ? 13 : 11} />
         
-        {/* OpenStreetMap Tile Layer */}
+        {/* Google Maps Tile Layer */}
         <TileLayer
-          key={osmLayer}
+          key={mapMode}
           attribution={currentTileConfig.attribution}
           url={currentTileConfig.url}
-          maxZoom={19}
+          subdomains={currentTileConfig.subdomains}
+          maxZoom={20}
         />
 
         {/* 1. Community Distress Pins */}
@@ -263,10 +297,10 @@ export default function CommunityMap({
                 center={[comm.latitude, comm.longitude]}
                 radius={sni > 70 ? 28 : 18}
                 pathOptions={{
-                  color: tier === 'Critical' ? '#ef4444' : tier === 'High' ? '#f97316' : '#10b981',
-                  fillColor: tier === 'Critical' ? '#ef4444' : tier === 'High' ? '#f97316' : '#10b981',
-                  fillOpacity: 0.12,
-                  weight: 1,
+                  color: tier === 'Critical' ? '#ea4335' : tier === 'High' ? '#f97316' : '#34a853',
+                  fillColor: tier === 'Critical' ? '#ea4335' : tier === 'High' ? '#f97316' : '#34a853',
+                  fillOpacity: 0.15,
+                  weight: 1.5,
                   dashArray: sni > 70 ? '3, 6' : undefined
                 }}
               />
@@ -278,54 +312,54 @@ export default function CommunityMap({
                   click: () => onSelectCommunity(comm)
                 }}
               >
-                <Popup>
-                  <div className="p-1 min-w-[240px] text-slate-100">
-                    <div className="flex items-center justify-between border-b border-slate-700/60 pb-2 mb-2">
+                <Popup className="google-style-popup">
+                  <div className="p-1 min-w-[240px] text-gray-800 font-sans">
+                    <div className="flex items-center justify-between border-b border-gray-200 pb-2 mb-2">
                       <div>
-                        <h4 className="font-bold text-sm text-white">{comm.name}</h4>
-                        <span className="text-[11px] text-slate-400">{comm.zone_type} &bull; {comm.ward_number}</span>
+                        <h4 className="font-bold text-sm text-gray-900">{comm.name}</h4>
+                        <span className="text-[11px] text-gray-500">{comm.zone_type} &bull; {comm.ward_number}</span>
                       </div>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                        tier === 'Critical' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
-                        tier === 'High' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
-                        'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        tier === 'Critical' ? 'bg-red-100 text-red-700 border border-red-300' :
+                        tier === 'High' ? 'bg-orange-100 text-orange-700 border border-orange-300' :
+                        'bg-emerald-100 text-emerald-700 border border-emerald-300'
                       }`}>
                         {tier}
                       </span>
                     </div>
 
                     {/* Complaint Paradox Box */}
-                    <div className="bg-slate-800/80 rounded-lg p-2.5 mb-2.5 border border-slate-700/60 text-xs space-y-1.5">
+                    <div className="bg-gray-50 rounded-lg p-2.5 mb-2.5 border border-gray-200 text-xs space-y-1.5">
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-400">Silent Need Index:</span>
-                        <span className="font-bold text-cyan-400 text-sm">{sni.toFixed(1)}/100</span>
+                        <span className="text-gray-600">Silent Need Index:</span>
+                        <span className="font-bold text-blue-600 text-sm">{sni.toFixed(1)}/100</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-400">Registered Complaints:</span>
-                        <span className="font-bold text-amber-300">{actualComplaints} in 90d</span>
+                        <span className="text-gray-600">Registered Complaints:</span>
+                        <span className="font-bold text-amber-600">{actualComplaints} in 90d</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-400">Expected Complaints:</span>
-                        <span className="font-semibold text-slate-200">{Math.round(expectedComplaints)}</span>
+                        <span className="text-gray-600">Expected Complaints:</span>
+                        <span className="font-semibold text-gray-800">{Math.round(expectedComplaints)}</span>
                       </div>
-                      <div className="pt-1 border-t border-slate-700/50 flex justify-between items-center text-[11px]">
-                        <span className="text-slate-400">Reporting Deficit:</span>
-                        <span className="font-mono font-bold text-red-400">{gapRatio.toFixed(1)}x Gap</span>
+                      <div className="pt-1 border-t border-gray-200 flex justify-between items-center text-[11px]">
+                        <span className="text-gray-600">Reporting Deficit:</span>
+                        <span className="font-mono font-bold text-red-600">{gapRatio.toFixed(1)}x Gap</span>
                       </div>
                     </div>
 
                     {isAnomaly && (
-                      <div className="flex items-start gap-1.5 bg-rose-950/40 border border-rose-800/50 rounded-md p-1.5 mb-2 text-[11px] text-rose-300">
-                        <ShieldAlert className="w-3.5 h-3.5 mt-0.5 shrink-0 text-rose-400" />
+                      <div className="flex items-start gap-1.5 bg-red-50 border border-red-200 rounded-md p-1.5 mb-2 text-[11px] text-red-700">
+                        <ShieldAlert className="w-3.5 h-3.5 mt-0.5 shrink-0 text-red-600" />
                         <span>Anomaly: {pred.anomaly_type || 'Severe Disconnect'}</span>
                       </div>
                     )}
 
                     <button
                       onClick={() => onSelectCommunity(comm)}
-                      className="w-full flex items-center justify-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-medium py-1.5 rounded-lg text-xs transition shadow-sm cursor-pointer"
+                      className="w-full flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 rounded-lg text-xs transition shadow-sm cursor-pointer"
                     >
-                      Inspect OSM & AI Diagnostics
+                      Inspect Google Map & AI Diagnostics
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -335,22 +369,22 @@ export default function CommunityMap({
           );
         })}
 
-        {/* 2. OpenStreetMap Physical Amenities (POIs) Layer */}
-        {showOsmPois && osmPois.map((poi, idx) => (
+        {/* 2. Physical Amenities (POIs) Layer */}
+        {showPois && osmPois.map((poi, idx) => (
           <Marker
             key={`poi-${idx}`}
             position={[poi.lat, poi.lon]}
             icon={createOsmPoiIcon(poi.type)}
           >
-            <Popup>
-              <div className="p-1 text-slate-100 text-xs space-y-1">
-                <div className="font-bold text-white flex items-center gap-1.5">
+            <Popup className="google-style-popup">
+              <div className="p-1 text-gray-800 text-xs space-y-1 font-sans">
+                <div className="font-bold text-gray-900 flex items-center gap-1.5">
                   <span>{poi.name}</span>
                 </div>
-                <div className="text-[11px] text-cyan-400 uppercase tracking-wider font-mono">
-                  OpenStreetMap {poi.type?.replace('_', ' ')}
+                <div className="text-[11px] text-blue-600 uppercase tracking-wider font-mono">
+                  {poi.type?.replace('_', ' ')}
                 </div>
-                <div className="text-[10px] text-slate-400">
+                <div className="text-[10px] text-gray-500">
                   Coordinates: {poi.lat.toFixed(4)}, {poi.lon.toFixed(4)}
                 </div>
               </div>
