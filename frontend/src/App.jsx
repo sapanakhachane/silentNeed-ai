@@ -3,7 +3,7 @@ import {
   Activity, ShieldAlert, Layers, Cpu, Truck, Plus, Search, 
   Filter, AlertTriangle, Droplets, MapPin, BarChart3, ChevronRight, 
   ExternalLink, Sparkles, RefreshCw, CheckCircle2, Info,
-  Compass, Building, ShieldCheck
+  Compass, Building, ShieldCheck, Globe
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell
@@ -19,8 +19,13 @@ import ExplainabilityDrawer from './components/ExplainabilityDrawer';
 import SimulationSandbox from './components/SimulationSandbox';
 import InterventionsView from './components/InterventionsView';
 import AddCommunityModal from './components/AddCommunityModal';
+import CivicChatbot from './components/CivicChatbot';
+import { TRANSLATIONS, SUPPORTED_LANGUAGES } from './i18n/translations';
 
 export default function App() {
+  const [currentLang, setCurrentLang] = useState('en');
+  const t = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'matrix', 'simulation', 'interventions'
   const [communities, setCommunities] = useState([]);
   const [analytics, setAnalytics] = useState(null);
@@ -98,14 +103,14 @@ export default function App() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-extrabold tracking-tight text-white m-0 p-0 text-left">
-                  SilentNeed <span className="text-cyan-400">AI</span>
+                  {t.appName.split(" ")[0]} <span className="text-cyan-400">{t.appName.split(" ")[1] || "AI"}</span>
                 </h1>
                 <span className="hidden sm:inline-block bg-cyan-500/10 text-cyan-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-cyan-500/20">
                   ML Risk Radar
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 hidden sm:block text-left">
-                Detecting Invisible Community Problems & Public Service Vacuums
+              <p className="text-[11px] text-slate-400 hidden sm:block text-left truncate max-w-[280px]">
+                {t.tagline}
               </p>
             </div>
           </div>
@@ -121,7 +126,7 @@ export default function App() {
               }`}
             >
               <Activity className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Geo-Radar</span> Dashboard
+              <span>{t.navDashboard}</span>
             </button>
 
             <button
@@ -133,7 +138,7 @@ export default function App() {
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              Complaint-Gap Matrix
+              <span>{t.navMatrix}</span>
             </button>
 
             <button
@@ -145,7 +150,7 @@ export default function App() {
               }`}
             >
               <Cpu className="w-3.5 h-3.5" />
-              What-If Sandbox
+              <span>{t.navSandbox}</span>
             </button>
 
             <button
@@ -157,18 +162,35 @@ export default function App() {
               }`}
             >
               <Truck className="w-3.5 h-3.5" />
-              Interventions
+              <span>{t.navInterventions}</span>
             </button>
           </nav>
 
-          {/* Action Button */}
+          {/* Action Buttons & Language Switcher */}
           <div className="flex items-center gap-2">
+            {/* Multilingual Selector */}
+            <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/80 rounded-xl px-2.5 py-1 hover:border-slate-600 transition">
+              <Globe className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <select
+                value={currentLang}
+                onChange={(e) => setCurrentLang(e.target.value)}
+                className="bg-transparent text-xs text-white font-semibold outline-none cursor-pointer pr-1"
+                aria-label="Select Language"
+              >
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code} className="bg-slate-900 text-white">
+                    {lang.flag} {lang.native}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <button
               onClick={() => setShowAddModal(true)}
               className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-lg shadow-cyan-900/30 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Add Field Audit</span>
+              <span className="hidden sm:inline">{t.navAddAudit}</span>
             </button>
           </div>
         </div>
@@ -186,19 +208,19 @@ export default function App() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 px-2.5 py-1 rounded-xl border border-cyan-500/20 font-bold text-[11px]">
                   <Compass className="w-3.5 h-3.5 text-cyan-400" />
-                  OpenStreetMap Cartographic & Amenity Audit
+                  {t.osmBarTitle}
                 </div>
                 <div className="flex items-center gap-2 text-slate-300 font-medium text-[11px]">
-                  <span className="text-slate-400">OSM Amenities Scanned:</span>
+                  <span className="text-slate-400">{t.osmBarScanned}:</span>
                   <span className="font-bold text-white">
                     {osmCityAudit ? (osmCityAudit.total_osm_water_points_mapped + osmCityAudit.total_osm_clinics_mapped) : 18} Verified
                   </span>
                   <span className="text-slate-600">&bull;</span>
-                  <span className="text-slate-400">💧 Water Points: <strong className="text-cyan-300">{osmCityAudit?.total_osm_water_points_mapped || 8}</strong></span>
+                  <span className="text-slate-400">💧 {t.osmBarWater}: <strong className="text-cyan-300">{osmCityAudit?.total_osm_water_points_mapped || 8}</strong></span>
                   <span className="text-slate-600">&bull;</span>
-                  <span className="text-slate-400">🏥 PHC / Clinics: <strong className="text-emerald-300">{osmCityAudit?.total_osm_clinics_mapped || 8}</strong></span>
+                  <span className="text-slate-400">🏥 {t.osmBarClinics}: <strong className="text-emerald-300">{osmCityAudit?.total_osm_clinics_mapped || 8}</strong></span>
                   <span className="text-slate-600">&bull;</span>
-                  <span className="text-slate-400">🚨 OSM Deserts: <strong className="text-rose-400">{osmCityAudit?.osm_infrastructure_deserts_count || 4} Critical Zones</strong></span>
+                  <span className="text-slate-400">🚨 {t.osmBarDeserts}: <strong className="text-rose-400">{osmCityAudit?.osm_infrastructure_deserts_count || 4} Critical Zones</strong></span>
                 </div>
               </div>
 
@@ -214,32 +236,29 @@ export default function App() {
               <div className="space-y-1 max-w-3xl">
                 <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-wider">
                   <Sparkles className="w-4 h-4" />
-                  The Civic Blindspot Principle
+                  {t.blindspotTitle}
                 </div>
                 <h2 className="text-base font-bold text-white m-0">
-                  Fewer complaints do not mean fewer problems.
+                  {t.blindspotSubtitle}
                 </h2>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Traditional municipal dashboards allocate funding where complaint volumes are highest. 
-                  SilentNeed AI cross-analyzes water quality, power reliability, and drainage metrics with 
-                  digital literacy indices to reveal <strong className="text-cyan-300 font-semibold">"Ghost Hotspots"</strong> — marginalized 
-                  communities enduring catastrophic public service failure in near-complete civic silence.
+                  {t.blindspotDesc}
                 </p>
               </div>
 
               {analytics?.complaint_disparity_paradox && (
                 <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 shrink-0 text-xs space-y-1 md:min-w-[280px]">
                   <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-                    Observed Civic Disparity
+                    {t.disparityLabel}
                   </span>
                   <div className="flex justify-between items-center text-slate-300">
-                    <span>Digitally Excluded Complaints:</span>
+                    <span>{t.excludedComplaints}:</span>
                     <strong className="text-amber-400 font-mono">
                       {analytics.complaint_disparity_paradox.digitally_excluded_avg_complaints} avg
                     </strong>
                   </div>
                   <div className="flex justify-between items-center text-slate-300">
-                    <span>True Service Distress:</span>
+                    <span>{t.trueDistress}:</span>
                     <strong className="text-red-400 font-mono">
                       {analytics.complaint_disparity_paradox.digitally_excluded_avg_real_risk}/100
                     </strong>
@@ -255,7 +274,7 @@ export default function App() {
             {analytics && (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 shadow-lg">
-                  <span className="text-xs text-slate-400 block mb-1">Monitored Citizens</span>
+                  <span className="text-xs text-slate-400 block mb-1">{t.kpiPopulation}</span>
                   <div className="text-2xl font-extrabold text-white">
                     {analytics.total_population_monitored?.toLocaleString()}
                   </div>
@@ -265,7 +284,7 @@ export default function App() {
                 </div>
 
                 <div className="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 shadow-lg">
-                  <span className="text-xs text-slate-400 block mb-1">Critical Silent Need Zones</span>
+                  <span className="text-xs text-slate-400 block mb-1">{t.kpiCriticalZones}</span>
                   <div className="text-2xl font-extrabold text-rose-400">
                     {analytics.critical_risk_zones}
                   </div>
@@ -275,7 +294,7 @@ export default function App() {
                 </div>
 
                 <div className="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 shadow-lg">
-                  <span className="text-xs text-slate-400 block mb-1">Avg Silent Need Index</span>
+                  <span className="text-xs text-slate-400 block mb-1">{t.kpiAvgSni}</span>
                   <div className="text-2xl font-extrabold text-cyan-400">
                     {analytics.average_silent_need_index} <span className="text-xs font-normal text-slate-400">/ 100</span>
                   </div>
@@ -285,7 +304,7 @@ export default function App() {
                 </div>
 
                 <div className="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 shadow-lg">
-                  <span className="text-xs text-slate-400 block mb-1">ML Anomalies Detected</span>
+                  <span className="text-xs text-slate-400 block mb-1">{t.kpiAnomalies}</span>
                   <div className="text-2xl font-extrabold text-amber-300">
                     {analytics.detected_silent_anomalies}
                   </div>
@@ -301,10 +320,10 @@ export default function App() {
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-white text-base flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-cyan-400" />
-                  Geo-Spatial Need Radar
+                  {t.mapTitle}
                 </h3>
                 <span className="text-xs text-slate-400">
-                  Click any pulsing marker to inspect explainable AI diagnostics
+                  {t.mapSubtitle}
                 </span>
               </div>
               <CommunityMap
@@ -318,9 +337,9 @@ export default function App() {
             <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
                 <div>
-                  <h3 className="font-bold text-white text-base">Monitored Community Registries</h3>
+                  <h3 className="font-bold text-white text-base">{t.tableTitle}</h3>
                   <p className="text-xs text-slate-400">
-                    Ranked by Silent Need Index. High SNI identifies communities with severe problems and suppressed reporting.
+                    {t.tableSubtitle}
                   </p>
                 </div>
 
@@ -330,7 +349,7 @@ export default function App() {
                     <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
                     <input
                       type="text"
-                      placeholder="Search community, ward..."
+                      placeholder={t.searchPlaceholder}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="bg-slate-950 border border-slate-800 text-xs text-white rounded-xl pl-8 pr-3 py-1.5 outline-none focus:border-cyan-500 w-44"
@@ -342,11 +361,11 @@ export default function App() {
                     onChange={(e) => setTierFilter(e.target.value)}
                     className="bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-2.5 py-1.5 outline-none focus:border-cyan-500"
                   >
-                    <option value="">All Tiers</option>
-                    <option value="Critical">Critical Only</option>
-                    <option value="High">High Only</option>
-                    <option value="Moderate">Moderate Only</option>
-                    <option value="Low">Low Only</option>
+                    <option value="">{t.filterAllTiers}</option>
+                    <option value="Critical">{t.filterCriticalOnly}</option>
+                    <option value="High">{t.filterHighOnly}</option>
+                    <option value="Moderate">{t.filterModerateOnly}</option>
+                    <option value="Low">{t.filterLowOnly}</option>
                   </select>
 
                   <button
@@ -357,7 +376,7 @@ export default function App() {
                         : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
                     }`}
                   >
-                    Anomalies Only
+                    {t.filterAnomaliesOnly}
                   </button>
                 </div>
               </div>
@@ -367,14 +386,14 @@ export default function App() {
                 <table className="w-full text-left text-xs text-slate-300">
                   <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
                     <tr>
-                      <th className="py-3 px-4">Community & Zone</th>
-                      <th className="py-3 px-3">Population</th>
-                      <th className="py-3 px-3 text-center">Complaints (90d)</th>
-                      <th className="py-3 px-3 text-center">Expected</th>
-                      <th className="py-3 px-3 text-center">Reporting Gap</th>
-                      <th className="py-3 px-3 text-center">True Distress</th>
-                      <th className="py-3 px-3 text-center">Silent Need Index</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
+                      <th className="py-3 px-4">{t.thCommunity}</th>
+                      <th className="py-3 px-3">{t.thPopulation}</th>
+                      <th className="py-3 px-3 text-center">{t.thActual}</th>
+                      <th className="py-3 px-3 text-center">{t.thExpected}</th>
+                      <th className="py-3 px-3 text-center">{t.thGap}</th>
+                      <th className="py-3 px-3 text-center">{t.thDistress}</th>
+                      <th className="py-3 px-3 text-center">{t.thSni}</th>
+                      <th className="py-3 px-4 text-right">{t.thActions}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 font-sans">
@@ -463,7 +482,7 @@ export default function App() {
                               }}
                               className="inline-flex items-center gap-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-cyan-500/30 transition cursor-pointer"
                             >
-                              XAI Brief
+                              {t.btnXaiBrief}
                               <ChevronRight className="w-3 h-3" />
                             </button>
                           </td>
@@ -581,6 +600,13 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Multilingual AI Civic Ombudsman Chatbot */}
+      <CivicChatbot
+        currentLang={currentLang}
+        setLang={setCurrentLang}
+        communities={communities}
+      />
     </div>
   );
 }
