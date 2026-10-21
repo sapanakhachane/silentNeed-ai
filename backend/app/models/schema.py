@@ -157,3 +157,18 @@ class CommunityFeedback(Base):
     reported_at = Column(DateTime, default=datetime.utcnow)
 
     community = relationship("Community", back_populates="feedbacks")
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(120), unique=True, index=True, nullable=False)
+    hashed_password = Column(String(200), nullable=False)
+    full_name = Column(String(120), nullable=False)
+    role = Column(String(50), default="citizen")  # "authority", "ngo", "citizen"
+    organization = Column(String(150), nullable=True)
+    ward_assigned = Column(String(100), nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+

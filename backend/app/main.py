@@ -15,6 +15,7 @@ from app.api.simulation import router as simulation_router
 from app.api.analytics import router as analytics_router
 from app.api.osm import router as osm_router
 from app.api.chat import router as chat_router
+from app.api.auth import router as auth_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -45,6 +46,7 @@ app.add_middleware(
 )
 
 # Include Routers
+app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(communities_router, prefix=settings.API_V1_STR)
 app.include_router(predictions_router, prefix=settings.API_V1_STR)
 app.include_router(interventions_router, prefix=settings.API_V1_STR)

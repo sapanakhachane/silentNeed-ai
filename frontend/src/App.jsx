@@ -3,14 +3,15 @@ import {
   Activity, ShieldAlert, Layers, Cpu, Truck, Plus, Search, 
   Filter, AlertTriangle, Droplets, MapPin, BarChart3, ChevronRight, 
   ExternalLink, Sparkles, RefreshCw, CheckCircle2, Info,
-  Compass, Building, ShieldCheck, Globe
+  Compass, Building, ShieldCheck, Globe, User, LogIn, LogOut, ChevronDown, UserCheck, KeyRound
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell
 } from 'recharts';
 
 import { 
-  fetchCommunities, fetchAnalyticsOverview, fetchComplaintGapMatrix, fetchCityOSMAudit 
+  fetchCommunities, fetchAnalyticsOverview, fetchComplaintGapMatrix, fetchCityOSMAudit,
+  getStoredUser, logoutUser, DEMO_ACCOUNTS, loginDemoRole
 } from './services/api';
 
 import CommunityMap from './components/CommunityMap';
@@ -20,11 +21,19 @@ import SimulationSandbox from './components/SimulationSandbox';
 import InterventionsView from './components/InterventionsView';
 import AddCommunityModal from './components/AddCommunityModal';
 import CivicChatbot from './components/CivicChatbot';
+import AuthModal from './components/AuthModal';
+import CitizenReportModal from './components/CitizenReportModal';
 import { TRANSLATIONS, SUPPORTED_LANGUAGES } from './i18n/translations';
 
 export default function App() {
   const [currentLang, setCurrentLang] = useState('en');
   const t = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+
+  // Authentication & Multi-Role State
+  const [currentUser, setCurrentUser] = useState(getStoredUser());
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showCitizenReportModal, setShowCitizenReportModal] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'matrix', 'simulation', 'interventions'
   const [communities, setCommunities] = useState([]);
@@ -166,7 +175,7 @@ export default function App() {
             </button>
           </nav>
 
-          {/* Action Buttons & Language Switcher */}
+          {/* Action Buttons, User Role & Language Switcher */}
           <div className="flex items-center gap-2">
             {/* Multilingual Selector */}
             <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/80 rounded-xl px-2.5 py-1 hover:border-slate-600 transition">
@@ -185,13 +194,124 @@ export default function App() {
               </select>
             </div>
 
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-lg shadow-cyan-900/30 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{t.navAddAudit}</span>
-            </button>
+            {/* User Profile & Role Switcher Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowUserDropdown(!showUserDropdown)}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700/80 hover:border-slate-600 text-xs text-white transition cursor-pointer"
+              >
+                <span className="text-base leading-none">{currentUser?.avatar || "🏛️"}</span>
+                <div className="hidden lg:block text-left">
+                  <div className="text-[11px] font-bold text-white leading-tight flex items-center gap-1">
+                    <span>{currentUser?.full_name?.split(" ")[0]}</span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase ${
+                      currentUser?.role === 'authority' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' :
+                      currentUser?.role === 'ngo' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                      'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    }`}>
+                      {currentUser?.role === 'authority' ? t.authRoleAuthority.split(" ")[0] :
+                       currentUser?.role === 'ngo' ? t.authRoleNgo.split(" ")[0] :
+                       t.authRoleCitizen.split(" ")[0]}
+                    </span>
+                  </div>
+                </div>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+
+              {/* Dropdown Menu */}
+              {showUserDropdown && (
+                <div className="absolute right-0 mt-2 w-72 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-2xl z-50 p-3 space-y-3 animate-in fade-in">
+                  <div className="border-b border-slate-800 pb-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-2xl p-1.5 rounded-xl bg-slate-800 border border-slate-700 shrink-0">
+                        {currentUser?.avatar || "🏛️"}
+                      </span>
+                      <div className="overflow-hidden">
+                        <div className="text-xs font-bold text-white truncate">{currentUser?.full_name}</div>
+                        <div className="text-[10px] text-slate-400 truncate">{currentUser?.organization}</div>
+                        <div className="text-[10px] text-cyan-400 font-medium truncate mt-0.5">
+                          {currentUser?.ward_assigned || "All Municipal Wards"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-[10px] uppercase font-bold text-slate-400 px-1 flex items-center justify-between">
+                      <span>{t.authSwitchRole} (Quick Demo)</span>
+                      <Sparkles className="w-3 h-3 text-amber-400" />
+                    </div>
+                    {DEMO_ACCOUNTS.map((acc) => (
+                      <button
+                        key={acc.id}
+                        onClick={async () => {
+                          const u = await loginDemoRole(acc.role);
+                          setCurrentUser(u);
+                          setShowUserDropdown(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition cursor-pointer text-left ${
+                          currentUser?.role === acc.role
+                            ? "bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-bold"
+                            : "text-slate-300 hover:bg-slate-800"
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="text-base">{acc.avatar}</span>
+                          <span className="text-[11px]">
+                            {acc.role === 'authority' ? t.authRoleAuthority : (acc.role === 'ngo' ? t.authRoleNgo : t.authRoleCitizen)}
+                          </span>
+                        </span>
+                        {currentUser?.role === acc.role && <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        setShowAuthModal(true);
+                      }}
+                      className="text-cyan-400 hover:underline flex items-center gap-1 text-[11px]"
+                    >
+                      <KeyRound className="w-3 h-3" />
+                      <span>{t.authSignIn} / Custom</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        logoutUser();
+                        setCurrentUser(null);
+                        setShowUserDropdown(false);
+                        setShowAuthModal(true);
+                      }}
+                      className="text-rose-400 hover:underline flex items-center gap-1 text-[11px]"
+                    >
+                      <LogOut className="w-3 h-3" />
+                      <span>{t.authSignOut}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Primary Action Button - Role Aware */}
+            {currentUser?.role === 'citizen' ? (
+              <button
+                onClick={() => setShowCitizenReportModal(true)}
+                className="flex items-center gap-1.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-lg shadow-amber-950/40 cursor-pointer"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{t.authReportGroundTruth}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-lg shadow-cyan-900/30 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{t.navAddAudit}</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -202,6 +322,55 @@ export default function App() {
         {/* 1. DASHBOARD VIEW */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
+
+            {/* Role-Aware Active Persona Banner */}
+            <div className={`rounded-2xl px-5 py-3 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs border ${
+              currentUser?.role === 'citizen'
+                ? 'bg-gradient-to-r from-amber-950/40 via-slate-900 to-amber-950/30 border-amber-500/30 text-amber-200'
+                : currentUser?.role === 'ngo'
+                ? 'bg-gradient-to-r from-emerald-950/40 via-slate-900 to-emerald-950/30 border-emerald-500/30 text-emerald-200'
+                : 'bg-gradient-to-r from-cyan-950/40 via-slate-900 to-cyan-950/30 border-cyan-500/30 text-cyan-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl p-1.5 rounded-xl bg-slate-900/80 border border-slate-800 shrink-0">
+                  {currentUser?.avatar || '🏛️'}
+                </span>
+                <div>
+                  <div className="font-bold text-white flex items-center gap-2 text-xs">
+                    <span>{currentUser?.full_name}</span>
+                    <span className="text-slate-500">&bull;</span>
+                    <span className="text-slate-300 font-medium">{currentUser?.organization}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
+                    {currentUser?.role === 'citizen'
+                      ? t.authCitizenPortalNotice
+                      : currentUser?.role === 'ngo'
+                      ? t.authNgoPortalNotice
+                      : t.authAuthorityPortalNotice}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {currentUser?.role === 'citizen' ? (
+                  <button
+                    onClick={() => setShowCitizenReportModal(true)}
+                    className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition cursor-pointer shadow flex items-center gap-1.5"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span>{t.authReportGroundTruth}</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowAuthModal(true)}
+                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition cursor-pointer border border-slate-700 flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3 text-cyan-400" />
+                    <span>{t.authSwitchRole}</span>
+                  </button>
+                )}
+              </div>
+            </div>
 
             {/* OpenStreetMap (OSM) Cartographic & Physical Amenity Intelligence Bar */}
             <div className="bg-slate-900/95 border border-slate-800 rounded-2xl px-5 py-3 shadow-lg flex flex-wrap items-center justify-between gap-3 text-xs">
@@ -600,6 +769,26 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Multi-Role Authentication & Role Switcher Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthSuccess={(user) => {
+          setCurrentUser(user);
+        }}
+        currentLang={currentLang}
+      />
+
+      {/* Citizen Ground-Truth Issue Report Modal */}
+      <CitizenReportModal
+        isOpen={showCitizenReportModal}
+        onClose={() => setShowCitizenReportModal(false)}
+        communities={communities}
+        onReportSubmitted={loadAllData}
+        currentLang={currentLang}
+        currentUser={currentUser}
+      />
 
       {/* Multilingual AI Civic Ombudsman Chatbot */}
       <CivicChatbot
