@@ -63,6 +63,22 @@ DEMO_ACCOUNTS = {
             "track_dispatched_interventions",
             "view_osm_water_points"
         ]
+    },
+    "researcher": {
+        "id": 104,
+        "email": "dr.kavita.rao@civicresearch.ac.in",
+        "full_name": "Dr. Kavita Rao",
+        "role": "researcher",
+        "organization": "Center for Algorithmic Fairness & Civic Policy",
+        "ward_assigned": "All Urban Academic Research Clusters",
+        "avatar": "🔬",
+        "badge_color": "purple",
+        "permissions": [
+            "raw_dataset_export",
+            "inspect_model_weights",
+            "outlier_analysis",
+            "bias_auditing"
+        ]
     }
 }
 

@@ -3,7 +3,7 @@ import {
   Activity, ShieldAlert, Layers, Cpu, Truck, Plus, Search, 
   Filter, AlertTriangle, Droplets, MapPin, BarChart3, ChevronRight, 
   ExternalLink, Sparkles, RefreshCw, CheckCircle2, Info,
-  Compass, Building, ShieldCheck, Globe, User, LogIn, LogOut, ChevronDown, UserCheck, KeyRound
+  Compass, Building, ShieldCheck, Globe, User, LogIn, LogOut, ChevronDown, UserCheck, KeyRound, Users
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell
@@ -23,6 +23,7 @@ import AddCommunityModal from './components/AddCommunityModal';
 import CivicChatbot from './components/CivicChatbot';
 import AuthModal from './components/AuthModal';
 import CitizenReportModal from './components/CitizenReportModal';
+import DomainAuthDashboard from './components/DomainAuthDashboard';
 import { TRANSLATIONS, SUPPORTED_LANGUAGES } from './i18n/translations';
 
 export default function App() {
@@ -173,6 +174,18 @@ export default function App() {
               <Truck className="w-3.5 h-3.5" />
               <span>{t.navInterventions}</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('domain-portal')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'domain-portal'
+                  ? 'bg-cyan-500 text-slate-950 shadow'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>{t.navDomainPortal}</span>
+            </button>
           </nav>
 
           {/* Action Buttons, User Role & Language Switcher */}
@@ -266,29 +279,42 @@ export default function App() {
                     ))}
                   </div>
 
-                  <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
+                  <div className="pt-2 border-t border-slate-800 space-y-2">
                     <button
                       onClick={() => {
                         setShowUserDropdown(false);
-                        setShowAuthModal(true);
+                        setActiveTab('domain-portal');
                       }}
-                      className="text-cyan-400 hover:underline flex items-center gap-1 text-[11px]"
+                      className="w-full py-1.5 px-2 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
                     >
-                      <KeyRound className="w-3 h-3" />
-                      <span>{t.authSignIn} / Custom</span>
+                      <Users className="w-3.5 h-3.5" />
+                      <span>{t.navDomainPortal} Dashboard</span>
                     </button>
-                    <button
-                      onClick={() => {
-                        logoutUser();
-                        setCurrentUser(null);
-                        setShowUserDropdown(false);
-                        setShowAuthModal(true);
-                      }}
-                      className="text-rose-400 hover:underline flex items-center gap-1 text-[11px]"
-                    >
-                      <LogOut className="w-3 h-3" />
-                      <span>{t.authSignOut}</span>
-                    </button>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <button
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          setShowAuthModal(true);
+                        }}
+                        className="text-cyan-400 hover:underline flex items-center gap-1 text-[11px]"
+                      >
+                        <KeyRound className="w-3 h-3" />
+                        <span>{t.authSignIn} / Custom</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          logoutUser();
+                          setCurrentUser(null);
+                          setShowUserDropdown(false);
+                          setShowAuthModal(true);
+                        }}
+                        className="text-rose-400 hover:underline flex items-center gap-1 text-[11px]"
+                      >
+                        <LogOut className="w-3 h-3" />
+                        <span>{t.authSignOut}</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -735,6 +761,18 @@ export default function App() {
               onRefreshData={loadAllData}
             />
           </div>
+        )}
+
+        {/* 5. CIVIC DOMAIN REGISTRATION & AUTHENTICATION DASHBOARD */}
+        {activeTab === 'domain-portal' && (
+          <DomainAuthDashboard
+            currentUser={currentUser}
+            setCurrentUser={setCurrentUser}
+            currentLang={currentLang}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+            onOpenCitizenReport={() => setShowCitizenReportModal(true)}
+            communities={communities}
+          />
         )}
       </main>
 
